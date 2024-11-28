@@ -41,6 +41,7 @@ pipeline:
         -DWITH_SSL=OPENSSL \
         $CMAKE_CROSSOPTS
       cmake --build build
+      echo 1
 
   - runs: |
       DESTDIR="${{targets.destdir}}" cmake --install build
