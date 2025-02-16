@@ -1,6 +1,6 @@
 package:
   name: apache-arrow
-  version: 17.0.0
+  version: 19.0.1
   epoch: 0
   description: "multi-language toolbox for accelerated data interchange and in-memory processing"
   copyright:
@@ -51,7 +51,7 @@ pipeline:
     with:
       repository: https://github.com/apache/arrow
       tag: apache-arrow-${{package.version}}
-      expected-commit: 6a2e19a852b367c72d7b12da4d104456491ed8b7
+      expected-commit: 07b05dad1a6a2a9d5498ab734399978257c4cc6e
 
   - working-directory: /home/build/apache-arrow/cpp
     uses: cmake/configure
