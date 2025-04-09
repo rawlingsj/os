@@ -7,3 +7,4 @@ permissions:
   pull_requests: write
   contents: write
   workflows: write
+  issues: write
