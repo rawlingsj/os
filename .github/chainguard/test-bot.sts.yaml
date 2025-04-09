@@ -1,0 +1,9 @@
+issuer: https://accounts.google.com
+
+# 103358458877650882924 test-bot@jrawlings-chainguard.iam.gserviceaccount.com
+subject_pattern: "(103358458877650882924)"
+
+permissions:
+  pull_requests: write
+  contents: write
+  workflows: write
