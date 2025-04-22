@@ -2,7 +2,7 @@ issuer: https://accounts.google.com
 
 # staging-images: not in use
 # prod-images: bot-gpt@prod-images-c6e5.iam.gserviceaccount.com
-subject: "109872302024169488967"
+subject: "104238958002823983114"
 
 permissions:
   contents: read
