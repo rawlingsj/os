@@ -1,8 +1,8 @@
 #nolint:valid-pipeline-git-checkout-tag
 package:
   name: ruby3.2-aws-eventstream
-  version: 1.3.0
-  epoch: 3
+  version: 1.3.1_git20250422
+  epoch: 0
   description: Amazon Web Services event stream library. Decodes and encodes binary stream under `vnd.amazon.event-stream` content-type
   copyright:
     - license: Apache-2.0
@@ -20,7 +20,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 761b5a43e8c97577e5fbb9f1eceb47cbde56be65
+      expected-commit: 485eb43e7e7c580159f18c2a498b1a27cc5b06a9
       repository: https://github.com/aws/aws-sdk-ruby
       branch: version-3
 
