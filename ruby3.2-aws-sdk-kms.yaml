@@ -1,8 +1,8 @@
 #nolint:valid-pipeline-git-checkout-tag
 package:
   name: ruby3.2-aws-sdk-kms
-  version: 1.88.0
-  epoch: 2
+  version: 1.88.1_git20250424
+  epoch: 0
   description: Official AWS Ruby gem for AWS Key Management Service (KMS). This gem is part of the AWS SDK for Ruby.
   copyright:
     - license: Apache-2.0
@@ -24,7 +24,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 761b5a43e8c97577e5fbb9f1eceb47cbde56be65
+      expected-commit: ef569a89d1e8c0cf7812621c02cc2b9814e35a03
       repository: https://github.com/aws/aws-sdk-ruby
       branch: version-3
 
