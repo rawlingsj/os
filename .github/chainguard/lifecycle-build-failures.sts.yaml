@@ -5,3 +5,4 @@ subject: "109380987214387756054"
 permissions:
   contents: read
   pull_requests: write
+  issues: write
