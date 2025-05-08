@@ -1,6 +1,6 @@
 package:
   name: jvmkill
-  version: 0.0.1
+  version: 0.0.2_git20250508
   epoch: 0
   description: Terminate the JVM when resources are exhausted
   copyright:
