@@ -1,7 +1,7 @@
 #nolint:git-checkout-must-use-github-updates,valid-pipeline-git-checkout-tag
 package:
   name: neuvector-sigstore-interface
-  version: 0_git20240804
+  version: 0_git20250524
   epoch: 0
   description: NeuVector sigstore interface for the SUSE NeuVector Container Security Platform
   copyright:
@@ -16,13 +16,8 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/neuvector/sigstore-interface
-      expected-commit: 0638a823bf6f3e744b0e0761c95b656d41bad63d
+      expected-commit: 816c283454241a6364d3991239ecfb02922e8403
       branch: main
-
-  - uses: go/bump
-    with:
-      deps: github.com/sigstore/cosign/v2@v2.2.4 github.com/hashicorp/go-retryablehttp@v0.7.7 github.com/docker/docker@v26.1.4
-      modroot: .
 
   - uses: go/build
     with:
