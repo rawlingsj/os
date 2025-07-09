@@ -133,8 +133,7 @@ test:
 
 update:
   enabled: true
-  github:
-    identifier: sudo-project/sudo
+  git:
     tag-filter-prefix: v
     strip-prefix: v
   manual: true
