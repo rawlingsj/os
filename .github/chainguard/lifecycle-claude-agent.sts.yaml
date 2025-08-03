@@ -1,0 +1,8 @@
+issuer: https://accounts.google.com
+
+subject: "115886573589418851481"
+
+permissions:
+  contents: read
+  pull_requests: write
+  issues: write
