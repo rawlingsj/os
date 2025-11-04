@@ -300,23 +300,425 @@ subpackages:
 
 test:
   pipeline:
-    - runs: |
-        # main package should provide 'python' and 'python3'.
+    - name: Verify Python binaries and versions
+      runs: |
+        # Verify both python and python3 commands exist and work
+        python --version 2>&1 | grep -q "Python 3.13" || exit 1
+        python3 --version 2>&1 | grep -q "Python 3.13" || exit 1
+
+        # Verify exact version match
         python version-check.py ${{package.version}}
         python3 version-check.py ${{package.version}}
-        pydoc3 --version
-        pydoc3 --help
-        python --version
-        python --help
-        python3 --version
-        python3 --help
-    - name: Verify working python3 -m venv
+
+        # Verify help output is functional
+        python --help | grep -q "usage" || exit 1
+        python3 --help | grep -q "usage" || exit 1
+
+        # Verify pydoc3 is available and functional
+        pydoc3 --version 2>&1 | grep -q "pydoc" || exit 1
+        pydoc3 --help | grep -q "usage" || exit 1
+    - name: Test core Python functionality
       runs: |
-        d=$(mktemp -d)
-        python3 -m venv "$d"
-        $d/bin/pip list
-        $d/bin/pip check
-        rm -Rf "$d"
+        # Test basic Python execution
+        output=$(python3 -c "print('hello world')")
+        test "$output" = "hello world" || exit 1
+
+        # Test arithmetic and expressions
+        result=$(python3 -c "print(2 + 2)")
+        test "$result" = "4" || exit 1
+
+        # Test string operations
+        output=$(python3 -c "s = 'test'; print(s.upper())")
+        test "$output" = "TEST" || exit 1
+
+        # Test list comprehensions
+        output=$(python3 -c "print(sum([x*x for x in range(5)]))")
+        test "$output" = "30" || exit 1
+    - name: Test standard library imports
+      runs: |
+        # Test critical standard library modules
+        python3 -c "import sys; assert sys.version_info.major == 3 and sys.version_info.minor == 13" || exit 1
+        python3 -c "import os; assert callable(os.path.exists)" || exit 1
+        python3 -c "import json; data = json.dumps({'test': 123}); assert 'test' in data" || exit 1
+        python3 -c "import re; assert re.match(r'\d+', '123')" || exit 1
+        python3 -c "import datetime; d = datetime.datetime.now(); assert d.year >= 2024" || exit 1
+        python3 -c "import urllib.request; assert hasattr(urllib.request, 'urlopen')" || exit 1
+        python3 -c "import sqlite3; assert hasattr(sqlite3, 'connect')" || exit 1
+        python3 -c "import hashlib; h = hashlib.sha256(b'test'); assert len(h.hexdigest()) == 64" || exit 1
+        python3 -c "import ssl; assert hasattr(ssl, 'create_default_context')" || exit 1
+        python3 -c "import xml.etree.ElementTree as ET; root = ET.Element('root'); assert root.tag == 'root'" || exit 1
+    - name: Test file I/O operations
+      runs: |
+        # Create a test directory
+        testdir=$(mktemp -d)
+        cd "$testdir"
+
+        # Test file writing and reading
+        python3 -c "with open('test.txt', 'w') as f: f.write('test content')"
+        test -f test.txt || exit 1
+
+        output=$(python3 -c "with open('test.txt', 'r') as f: print(f.read().strip())")
+        test "$output" = "test content" || exit 1
+
+        # Test binary file operations
+        python3 -c "with open('test.bin', 'wb') as f: f.write(b'\x00\x01\x02\x03')"
+        test -f test.bin || exit 1
+
+        size=$(python3 -c "import os; print(os.path.getsize('test.bin'))")
+        test "$size" = "4" || exit 1
+
+        # Cleanup
+        cd /
+        rm -rf "$testdir"
+    - name: Test Python script execution
+      runs: |
+        # Create a test script
+        testdir=$(mktemp -d)
+        cat > "$testdir/test_script.py" << 'EOF'
+        #!/usr/bin/env python3
+        import sys
+
+        def fibonacci(n):
+            if n <= 1:
+                return n
+            return fibonacci(n-1) + fibonacci(n-2)
+
+        if __name__ == '__main__':
+            result = fibonacci(10)
+            print(f"Fibonacci(10) = {result}")
+            sys.exit(0 if result == 55 else 1)
+        EOF
+
+        # Execute the script
+        python3 "$testdir/test_script.py" || exit 1
+
+        # Verify output
+        output=$(python3 "$testdir/test_script.py")
+        echo "$output" | grep -q "Fibonacci(10) = 55" || exit 1
+
+        # Cleanup
+        rm -rf "$testdir"
+    - name: Test virtual environment creation and functionality
+      runs: |
+        # Create a virtual environment
+        venvdir=$(mktemp -d)
+        python3 -m venv "$venvdir" || exit 1
+
+        # Verify venv structure
+        test -f "$venvdir/bin/python3" || exit 1
+        test -f "$venvdir/bin/pip" || exit 1
+        test -f "$venvdir/pyvenv.cfg" || exit 1
+
+        # Verify pip is functional
+        "$venvdir/bin/pip" --version | grep -q "pip" || exit 1
+        "$venvdir/bin/pip" list || exit 1
+        "$venvdir/bin/pip" check || exit 1
+
+        # Verify Python in venv works
+        output=$("$venvdir/bin/python3" -c "print('venv works')")
+        test "$output" = "venv works" || exit 1
+
+        # Verify venv isolation
+        venv_path=$("$venvdir/bin/python3" -c "import sys; print(sys.prefix)")
+        echo "$venv_path" | grep -q "$venvdir" || exit 1
+
+        # Cleanup
+        rm -rf "$venvdir"
+    - name: Test pip package management
+      runs: |
+        # Create a venv for pip testing
+        venvdir=$(mktemp -d)
+        python3 -m venv "$venvdir"
+
+        # Verify pip list works
+        "$venvdir/bin/pip" list > "$venvdir/packages.txt"
+        grep -q "pip" "$venvdir/packages.txt" || exit 1
+
+        # Test pip show
+        "$venvdir/bin/pip" show pip | grep -q "Name: pip" || exit 1
+
+        # Verify pip freeze works
+        "$venvdir/bin/pip" freeze > "$venvdir/freeze.txt"
+        test -f "$venvdir/freeze.txt" || exit 1
+
+        # Cleanup
+        rm -rf "$venvdir"
+    - name: Test Python module execution
+      runs: |
+        # Test running modules with -m flag
+        python3 -m json.tool --help | grep -q "usage" || exit 1
+
+        # Test json.tool functionality
+        echo '{"test": 123}' | python3 -m json.tool | grep -q '"test"' || exit 1
+
+        # Test calendar module
+        python3 -m calendar 2024 1 | grep -q "January" || exit 1
+
+        # Test timeit module
+        python3 -m timeit -n 1 -r 1 "1+1" | grep -q "loop" || exit 1
+    - name: Test Python compilation and bytecode
+      runs: |
+        # Create test directory
+        testdir=$(mktemp -d)
+        cd "$testdir"
+
+        # Create a Python module
+        cat > test_module.py << 'EOF'
+        def add(a, b):
+            return a + b
+
+        def multiply(a, b):
+            return a * b
+        EOF
+
+        # Compile the module
+        python3 -m py_compile test_module.py || exit 1
+
+        # Verify __pycache__ was created
+        test -d __pycache__ || exit 1
+
+        # Verify .pyc file exists
+        test -f __pycache__/test_module.*.pyc || exit 1
+
+        # Test importing and using the compiled module
+        result=$(python3 -c "import test_module; print(test_module.add(5, 3))")
+        test "$result" = "8" || exit 1
+
+        result=$(python3 -c "import test_module; print(test_module.multiply(4, 7))")
+        test "$result" = "28" || exit 1
+
+        # Cleanup
+        cd /
+        rm -rf "$testdir"
+    - name: Test error handling and exceptions
+      runs: |
+        # Test that Python properly handles syntax errors
+        if python3 -c "invalid syntax here" 2>/dev/null; then
+            echo "ERROR: Python should have failed on invalid syntax"
+            exit 1
+        fi
+
+        # Test exception handling
+        output=$(python3 -c "try:\n    raise ValueError('test error')\nexcept ValueError as e:\n    print('caught:', e)" 2>&1)
+        echo "$output" | grep -q "caught: test error" || exit 1
+
+        # Test that import errors are properly reported
+        if python3 -c "import nonexistent_module_xyz" 2>/dev/null; then
+            echo "ERROR: Python should have failed on missing module"
+            exit 1
+        fi
+
+        # Verify error message contains useful information
+        python3 -c "import nonexistent_module_xyz" 2>&1 | grep -q "ModuleNotFoundError" || exit 1
+    - name: Test Unicode and encoding support
+      runs: "# Test Unicode string handling\noutput=$(python3 -c \"print('Hello 世界 \U0001F40D')\")\necho \"$output\" | grep -q \"世界\" || exit 1\necho \"$output\" | grep -q \"\U0001F40D\" || exit 1\n\n# Test encoding/decoding\noutput=$(python3 -c \"s = 'test'; b = s.encode('utf-8'); print(b.decode('utf-8'))\")\ntest \"$output\" = \"test\" || exit 1\n\n# Test various encodings\npython3 -c \"'test'.encode('utf-8'); 'test'.encode('ascii'); 'test'.encode('latin-1')\" || exit 1\n"
+    - name: Test multiprocessing and threading
+      runs: |
+        # Test threading module
+        python3 -c "import threading; t = threading.Thread(target=lambda: None); t.start(); t.join()" || exit 1
+
+        # Test multiprocessing module
+        python3 -c "import multiprocessing; assert multiprocessing.cpu_count() > 0" || exit 1
+
+        # Test concurrent.futures
+        python3 -c "from concurrent.futures import ThreadPoolExecutor; e = ThreadPoolExecutor(max_workers=2); e.shutdown()" || exit 1
+    - name: Test networking capabilities
+      runs: |
+        # Test socket module
+        python3 -c "import socket; s = socket.socket(); s.close()" || exit 1
+
+        # Test http.server module exists and is importable
+        python3 -c "import http.server; assert hasattr(http.server, 'HTTPServer')" || exit 1
+
+        # Test urllib
+        python3 -c "from urllib.parse import urlparse; u = urlparse('https://example.com/path'); assert u.scheme == 'https'" || exit 1
+    - name: Test compression and archive support
+      runs: |
+        testdir=$(mktemp -d)
+        cd "$testdir"
+
+        # Test gzip
+        python3 -c "import gzip; gzip.open('test.gz', 'wb').write(b'test data')" || exit 1
+        test -f test.gz || exit 1
+        output=$(python3 -c "import gzip; print(gzip.open('test.gz', 'rb').read().decode())")
+        test "$output" = "test data" || exit 1
+
+        # Test zipfile
+        python3 -c "import zipfile; z = zipfile.ZipFile('test.zip', 'w'); z.writestr('file.txt', 'content'); z.close()" || exit 1
+        test -f test.zip || exit 1
+
+        # Test tarfile
+        python3 -c "import tarfile; t = tarfile.open('test.tar', 'w'); t.close()" || exit 1
+        test -f test.tar || exit 1
+
+        cd /
+        rm -rf "$testdir"
+    - name: Test cryptography and hashing
+      runs: |
+        # Test various hash algorithms
+        python3 -c "import hashlib; h = hashlib.md5(b'test'); assert len(h.hexdigest()) == 32" || exit 1
+        python3 -c "import hashlib; h = hashlib.sha1(b'test'); assert len(h.hexdigest()) == 40" || exit 1
+        python3 -c "import hashlib; h = hashlib.sha256(b'test'); assert len(h.hexdigest()) == 64" || exit 1
+        python3 -c "import hashlib; h = hashlib.sha512(b'test'); assert len(h.hexdigest()) == 128" || exit 1
+
+        # Test blake2
+        python3 -c "import hashlib; h = hashlib.blake2b(b'test'); assert len(h.hexdigest()) > 0" || exit 1
+
+        # Test hmac
+        python3 -c "import hmac; h = hmac.new(b'key', b'message', 'sha256'); assert len(h.hexdigest()) == 64" || exit 1
+    - name: Test database support (SQLite)
+      runs: |
+        testdir=$(mktemp -d)
+        cd "$testdir"
+
+        # Create and use SQLite database
+        python3 << 'EOF'
+        import sqlite3
+
+        # Create database and table
+        conn = sqlite3.connect('test.db')
+        cursor = conn.cursor()
+        cursor.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)')
+        cursor.execute('INSERT INTO users (name) VALUES (?)', ('Alice',))
+        cursor.execute('INSERT INTO users (name) VALUES (?)', ('Bob',))
+        conn.commit()
+
+        # Query data
+        cursor.execute('SELECT name FROM users ORDER BY name')
+        results = cursor.fetchall()
+        assert len(results) == 2
+        assert results[0][0] == 'Alice'
+        assert results[1][0] == 'Bob'
+
+        conn.close()
+        print('SQLite test passed')
+        EOF
+
+        test -f test.db || exit 1
+
+        cd /
+        rm -rf "$testdir"
+    - name: Test XML and HTML parsing
+      runs: |
+        # Test XML parsing
+        python3 << 'EOF'
+        import xml.etree.ElementTree as ET
+
+        xml_data = '<root><item id="1">Test</item></root>'
+        root = ET.fromstring(xml_data)
+        assert root.tag == 'root'
+        assert root.find('item').text == 'Test'
+        assert root.find('item').get('id') == '1'
+        print('XML parsing passed')
+        EOF
+
+        # Test HTML parser
+        python3 -c "from html.parser import HTMLParser; p = HTMLParser(); p.feed('<html><body>test</body></html>')" || exit 1
+    - name: Test decimal and math operations
+      runs: |
+        # Test decimal module for precise arithmetic
+        python3 -c "from decimal import Decimal; d = Decimal('0.1') + Decimal('0.2'); assert d == Decimal('0.3')" || exit 1
+
+        # Test math module
+        python3 -c "import math; assert math.sqrt(16) == 4.0" || exit 1
+        python3 -c "import math; assert abs(math.pi - 3.14159) < 0.001" || exit 1
+        python3 -c "import math; assert math.factorial(5) == 120" || exit 1
+
+        # Test statistics module
+        python3 -c "import statistics; assert statistics.mean([1, 2, 3, 4, 5]) == 3" || exit 1
+    - name: Test pathlib for modern path handling
+      runs: |
+        testdir=$(mktemp -d)
+
+        python3 << EOF
+        from pathlib import Path
+
+        # Test Path operations
+        p = Path('$testdir')
+        assert p.exists()
+        assert p.is_dir()
+
+        # Create file using pathlib
+        test_file = p / 'test.txt'
+        test_file.write_text('pathlib test')
+        assert test_file.exists()
+        assert test_file.read_text() == 'pathlib test'
+
+        # Test path manipulation
+        assert test_file.name == 'test.txt'
+        assert test_file.suffix == '.txt'
+        assert test_file.parent == p
+
+        print('Pathlib test passed')
+        EOF
+
+        rm -rf "$testdir"
+    - name: Test collections and data structures
+      runs: |
+        # Test collections module
+        python3 << 'EOF'
+        from collections import defaultdict, Counter, deque, OrderedDict
+
+        # Test defaultdict
+        d = defaultdict(int)
+        d['key'] += 1
+        assert d['key'] == 1
+
+        # Test Counter
+        c = Counter(['a', 'b', 'a', 'c', 'a'])
+        assert c['a'] == 3
+        assert c.most_common(1)[0] == ('a', 3)
+
+        # Test deque
+        dq = deque([1, 2, 3])
+        dq.appendleft(0)
+        assert list(dq) == [0, 1, 2, 3]
+
+        # Test OrderedDict
+        od = OrderedDict([('a', 1), ('b', 2)])
+        assert list(od.keys()) == ['a', 'b']
+
+        print('Collections test passed')
+        EOF
+    - name: Test itertools and functools
+      runs: |
+        # Test itertools
+        python3 << 'EOF'
+        import itertools
+
+        # Test combinations
+        result = list(itertools.combinations([1, 2, 3], 2))
+        assert len(result) == 3
+
+        # Test permutations
+        result = list(itertools.permutations([1, 2], 2))
+        assert len(result) == 2
+
+        # Test chain
+        result = list(itertools.chain([1, 2], [3, 4]))
+        assert result == [1, 2, 3, 4]
+
+        print('Itertools test passed')
+        EOF
+
+        # Test functools
+        python3 << 'EOF'
+        from functools import lru_cache, reduce
+
+        @lru_cache(maxsize=128)
+        def fibonacci(n):
+            if n < 2:
+                return n
+            return fibonacci(n-1) + fibonacci(n-2)
+
+        assert fibonacci(10) == 55
+
+        # Test reduce
+        result = reduce(lambda x, y: x + y, [1, 2, 3, 4])
+        assert result == 10
+
+        print('Functools test passed')
+        EOF
 
 update:
   enabled: true
